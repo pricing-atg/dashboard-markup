@@ -4,10 +4,13 @@ import numpy as np
 import plotly.express as px
 from datetime import datetime
 from io import BytesIO
-import locale
 
-# Ajustar locale para pt-BR
-locale.setlocale(locale.LC_TIME, "pt_BR.UTF-8")
+# Mapeamento manual de meses para português
+meses_pt = {
+    'Jan': 'Jan', 'Feb': 'Fev', 'Mar': 'Mar', 'Apr': 'Abr',
+    'May': 'Mai', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago',
+    'Sep': 'Set', 'Oct': 'Out', 'Nov': 'Nov', 'Dec': 'Dez'
+}
 
 st.set_page_config(page_title="Dashboard de Sinistralidade", layout="wide", initial_sidebar_state="expanded")
 
@@ -62,8 +65,9 @@ def calcular_markup_politica(row, politica_df, produto_filtro):
         return obter_markup_politica({"Itens": row["Itens"], "Produto": produto_filtro}, politica_df)
 
 # Leitura da base principal
-df = df = pd.read_excel("Base Final.xlsx")
+df = pd.read_excel("Base Final.xlsx")
 df["Referência"] = pd.to_datetime(df["Referência"])
+df["Período Formatado"] = df["Referência"].dt.strftime("%b/%Y").apply(lambda x: meses_pt.get(x[:3], x[:3]) + x[3:])
 df = calcular_indicadores(df)
 
 # Navegação
@@ -81,7 +85,7 @@ else:
     politica = pd.DataFrame(columns=["Produto", "Itens", "Markup Política"])
 
 # === PÁGINA 1 ===
-# === PÁGINA 1 ===
+
 if pagina == "Resumo e Evolução":
     st.subheader("📈 Evolução Mensal do Markup")
     st.caption("ℹ️ Se nenhum valor for selecionado, todos os dados serão considerados.")
