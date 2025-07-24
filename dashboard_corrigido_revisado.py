@@ -62,7 +62,7 @@ def calcular_markup_politica(row, politica_df, produto_filtro):
         return obter_markup_politica({"Itens": row["Itens"], "Produto": produto_filtro}, politica_df)
 
 # Leitura da base principal
-df = pd.read_excel(r"R:\Estatistica\Estudos\2025\Painel - Política de Mkp\Base Final.xlsx")
+df = df = pd.read_excel("Base Final.xlsx")
 df["Referência"] = pd.to_datetime(df["Referência"])
 df = calcular_indicadores(df)
 
