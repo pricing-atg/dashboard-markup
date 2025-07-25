@@ -1,4 +1,18 @@
 import streamlit as st
+SENHA_CORRETA = "acesso123"
+
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.title("🔐 Acesso Restrito")
+    senha = st.text_input("Digite a senha:", type="password")
+    if st.button("Entrar"):
+        if senha == SENHA_CORRETA:
+            st.session_state["autenticado"] = True
+        else:
+            st.error("Senha incorreta.")
+    st.stop()
 import pandas as pd
 import numpy as np
 import plotly.express as px
