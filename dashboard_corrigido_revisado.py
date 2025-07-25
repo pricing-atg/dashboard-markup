@@ -18,7 +18,7 @@ def validar_senha():
         st.session_state["erro_autenticacao"] = True
 
 if not st.session_state["autenticado"]:
-    st.image("Logo.png", width=200)
+    st.image("Logo.png", width=220)
     st.title("🔒 Acesso Restrito")
     st.text_input("Digite a senha:", type="password", key="senha_digitada", on_change=validar_senha)
     if st.session_state.get("erro_autenticacao", False):
