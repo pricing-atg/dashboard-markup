@@ -6,7 +6,7 @@ from datetime import datetime
 from io import BytesIO
 
 # ========== AUTENTICAÇÃO ==========
-SENHA_CORRETA = "acesso123"
+SENHA_CORRETA = "pricing2025"
 
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
