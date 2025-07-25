@@ -56,7 +56,7 @@ st.markdown("""
 # ========== SIDEBAR ==========
 with st.sidebar:
     st.image("Logo.png", width=150)
-    pagina = st.sidebar.radio("📌 Navegação", ["Resumo e Evolução", "Análise de Markup", "Simulações & Tendências"])
+    pagina = st.radio("📌 Navegação", ["Resumo e Evolução", "Análise de Markup"])
     st.title("📁 Política de Markup")
     st.caption("📌 Esta base será usada para comparar os dados reais com os valores ideais de markup.")
     base_politica = st.file_uploader("Upload da Política (.xlsx)", type="xlsx")
@@ -247,96 +247,6 @@ elif pagina == "Análise de Markup":
         file_name="analise_markup.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-# Adicione este trecho ao seu script Streamlit principal após as demais abas
-
-elif pagina == "Simulações & Tendências":
-    st.title("🔄 Simulações e Análise de Tendência")
-
-    # ===== Simulador Detalhado =====
-    st.subheader("🔢 Simulador: Impacto do Novo Markup por Produto e Seguradora")
-    col1, col2, col3 = st.columns(3)
-    produto_sim = col1.selectbox("Selecionar Produto", sorted(df["Produto"].unique()))
-    seguradora_sim = col2.selectbox("Selecionar Seguradora", sorted(df["Seguradora"].unique()))
-    novo_markup = col3.number_input("Novo Markup Ideal", min_value=0.01, max_value=10.0, step=0.05, value=1.5)
-
-    df_impacto = df[(df["Produto"] == produto_sim) & (df["Seguradora"] == seguradora_sim)].copy()
-    qtd_meses_impacto = df_impacto["Referência"].nunique()
-
-    receita_m = df_impacto["Receita"].sum() / qtd_meses_impacto if qtd_meses_impacto else 0
-    despesa_m = df_impacto["Despesa"].sum() / qtd_meses_impacto if qtd_meses_impacto else 0
-    sinistralidade_atual = despesa_m / receita_m if receita_m else np.nan
-    markup_atual = (1 - 0.0615) / sinistralidade_atual if sinistralidade_atual else np.nan
-    sinistralidade_necessaria = (1 - 0.0615) / novo_markup if novo_markup != 0 else np.nan
-    gap_simulado = novo_markup - markup_atual if not pd.isna(markup_atual) else np.nan
-
-    alerta = "Não Calculado"
-    if not pd.isna(gap_simulado):
-        if gap_simulado <= -2:
-            alerta = "❌ Muito Abaixo"
-        elif -2 < gap_simulado <= -0.5:
-            alerta = "⚠️ Abaixo"
-        elif -0.5 < gap_simulado < 0.5:
-            alerta = "✔️ Dentro"
-        elif 0.5 <= gap_simulado < 2:
-            alerta = "⚠️ Acima"
-        else:
-            alerta = "❌ Muito Acima"
-
-    st.markdown(f"**Receita Média:** R$ {receita_m:,.2f} | **Despesa Média:** R$ {despesa_m:,.2f}")
-    st.markdown(f"**Markup Atual:** {markup_atual:.2f} | **Gap Simulado:** {gap_simulado:.2f} ({alerta})")
-    st.markdown(f"**Para atingir o markup de {novo_markup:.2f}, a sinistralidade máxima deve ser de {sinistralidade_necessaria:.2%}**")
-
-    st.divider()
-
-    # ===== Tendência com Previsão =====
-    st.subheader("📊 Tendência Histórica e Previsão de Markup")
-    tipo_tendencia = st.selectbox("Métrica a Analisar", ["Markup", "Gap Markup"])
-    filtro_prod = st.multiselect("Produto", sorted(df["Produto"].unique()), default=[])
-    filtro_seg = st.multiselect("Seguradora", sorted(df["Seguradora"].unique()), default=[])
-    prever = st.checkbox("🔮 Incluir previsão para próximos 3 meses")
-
-    df_trend = df.copy()
-    if filtro_prod:
-        df_trend = df_trend[df_trend["Produto"].isin(filtro_prod)]
-    if filtro_seg:
-        df_trend = df_trend[df_trend["Seguradora"].isin(filtro_seg)]
-
-    df_trend = calcular_indicadores(df_trend)
-    df_trend["Gap Markup"] = df_trend["Markup"] - df_trend.apply(lambda row: obter_markup_politica(row, politica) if not politica.empty else np.nan, axis=1)
-
-    df_trend = df_trend.sort_values("Referência")
-    df_trend["Período"] = df_trend["Referência"].dt.strftime("%b/%y")
-    color_col = "Produto" if filtro_prod else "Seguradora"
-    y_col = tipo_tendencia
-
-    if prever:
-        import statsmodels.api as sm
-        forecast_df = pd.DataFrame()
-
-        for key, grupo in df_trend.groupby(color_col):
-            g = grupo.groupby("Referência")[y_col].mean().reset_index()
-            g["num"] = range(len(g))
-            X = sm.add_constant(g["num"])
-            model = sm.OLS(g[y_col], X).fit()
-
-            future = pd.DataFrame({"num": list(range(len(g), len(g)+3))})
-            future_X = sm.add_constant(future)
-            future[y_col] = model.predict(future_X)
-            future["Referência"] = pd.date_range(g["Referência"].max() + pd.DateOffset(months=1), periods=3, freq="MS")
-            future[color_col] = key
-
-            forecast_df = pd.concat([forecast_df, future[["Referência", y_col, color_col]]])
-
-        df_plot = pd.concat([df_trend[["Referência", y_col, color_col]], forecast_df])
-        df_plot["Previsao"] = df_plot["Referência"] > df_trend["Referência"].max()
-    else:
-        df_plot = df_trend[["Referência", y_col, color_col]].copy()
-        df_plot["Previsao"] = False
-
-    fig = px.line(df_plot, x="Referência", y=y_col, color=color_col, line_dash="Previsao",
-                  title=f"Tendência de {y_col} com ou sem previsão", markers=True)
-    st.plotly_chart(fig, use_container_width=True)
-
 # ========== RODAPÉ ==========
 st.markdown("---")
 st.image("Logo.png", width=120)
