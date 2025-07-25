@@ -1,25 +1,31 @@
 import streamlit as st
-# Defina a senha correta
+# Senha correta
 SENHA_CORRETA = "acesso123"
 
-# Inicializa o estado da autenticação
+# Inicializa o estado da autenticação e da senha digitada
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
-# Lógica de autenticação
-def autenticar():
-    st.title("🔐 Acesso Restrito")
-    senha = st.text_input("Digite a senha:", type="password")
-    if senha == SENHA_CORRETA:
-        st.session_state["autenticado"] = True
-        st.experimental_rerun()  # Atualiza a tela imediatamente
-    elif senha != "":
-        st.error("Senha incorreta.")
+if "tentativa" not in st.session_state:
+    st.session_state["tentativa"] = ""
 
-# Executa autenticação se necessário
+# Se ainda não autenticado, mostra campo de senha
 if not st.session_state["autenticado"]:
-    autenticar()
+    st.title("🔐 Acesso Restrito")
+    st.session_state["tentativa"] = st.text_input("Digite a senha:", type="password")
+
+    if st.button("Entrar"):
+        if st.session_state["tentativa"] == SENHA_CORRETA:
+            st.session_state["autenticado"] = True
+        else:
+            st.error("Senha incorreta.")
+        st.experimental_set_query_params(refresh="1")
+        st.stop()
+
+# Se não autenticado, interrompe
+if not st.session_state["autenticado"]:
     st.stop()
+    
 import pandas as pd
 import numpy as np
 import plotly.express as px
