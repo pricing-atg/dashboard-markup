@@ -56,7 +56,7 @@ st.markdown("""
 # ========== SIDEBAR ==========
 with st.sidebar:
     st.image("Logo.png", width=150)
-    pagina = st.radio("📌 Navegação", ["Resumo e Evolução", "Análise de Markup"])
+    pagina = st.sidebar.radio("📌 Navegação", ["Resumo e Evolução", "Análise de Markup", "Simulações & Tendências"])
     st.title("📁 Política de Markup")
     st.caption("📌 Esta base será usada para comparar os dados reais com os valores ideais de markup.")
     base_politica = st.file_uploader("Upload da Política (.xlsx)", type="xlsx")
@@ -247,6 +247,64 @@ elif pagina == "Análise de Markup":
         file_name="analise_markup.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+# Adicione este trecho ao seu script Streamlit principal após as demais abas
+
+elif pagina == "Simulações & Tendências":
+    st.title("🔄 Simulações e Análise de Tendência")
+
+    st.subheader("🔢 Simulador de Ajuste de Markup")
+    col1, col2, col3 = st.columns(3)
+    produtos_sim = col1.multiselect("Selecionar Produto", sorted(df["Produto"].unique()))
+    seguradoras_sim = col2.multiselect("Selecionar Seguradora", sorted(df["Seguradora"].unique()))
+    novo_markup = col3.number_input("Novo Markup Ideal", min_value=0.0, max_value=10.0, step=0.1)
+
+    df_sim = df.copy()
+    if produtos_sim:
+        df_sim = df_sim[df_sim["Produto"].isin(produtos_sim)]
+    if seguradoras_sim:
+        df_sim = df_sim[df_sim["Seguradora"].isin(seguradoras_sim)]
+
+    df_sim = calcular_indicadores(df_sim)
+    df_sim["Novo Markup Ideal"] = novo_markup
+    df_sim["Novo Gap"] = df_sim["Markup"] - df_sim["Novo Markup Ideal"]
+    df_sim["Novo Alerta"] = df_sim["Novo Gap"].apply(
+        lambda gap: "Não Calculado" if pd.isna(gap) else
+        "❌ Muito Abaixo" if gap <= -2 else
+        "⚠️ Abaixo" if -2 < gap <= -0.5 else
+        "✔️ Dentro" if -0.5 < gap < 0.5 else
+        "⚠️ Acima" if 0.5 <= gap < 2 else
+        "❌ Muito Acima"
+    )
+
+    total = len(df_sim)
+    dentro = df_sim["Novo Alerta"].eq("✔️ Dentro").sum()
+    pct_dentro = dentro / total if total else 0
+
+    st.metric("% Dentro da Faixa com Novo Markup", f"{pct_dentro:.2%}")
+    st.dataframe(df_sim[["Seguradora", "Produto", "Markup", "Novo Markup Ideal", "Novo Gap", "Novo Alerta"]]
+                 .style.format({"Markup": "{:.2f}", "Novo Markup Ideal": "{:.2f}", "Novo Gap": "{:.2f}"}),
+                 use_container_width=True)
+
+    st.subheader("📊 Tendência de Markup ou Gap")
+    tipo_tendencia = st.selectbox("Tipo de Análise", ["Markup", "Gap Markup"])
+    filtro_prod = st.multiselect("Produto", sorted(df["Produto"].unique()), default=[])
+    filtro_seg = st.multiselect("Seguradora", sorted(df["Seguradora"].unique()), default=[])
+
+    df_trend = df.copy()
+    if filtro_prod:
+        df_trend = df_trend[df_trend["Produto"].isin(filtro_prod)]
+    if filtro_seg:
+        df_trend = df_trend[df_trend["Seguradora"].isin(filtro_seg)]
+
+    df_trend = calcular_indicadores(df_trend)
+    df_trend["Gap Markup"] = df_trend["Markup"] - df_trend.apply(lambda row: obter_markup_politica(row, politica) if not politica.empty else np.nan, axis=1)
+    df_trend = df_trend.sort_values("Referência")
+
+    color_col = "Produto" if filtro_prod else "Seguradora"
+    y_col = tipo_tendencia
+    fig = px.line(df_trend, x="Referência", y=y_col, color=color_col, markers=True, title=f"Tendência de {tipo_tendencia}")
+    st.plotly_chart(fig, use_container_width=True)
+
 # ========== RODAPÉ ==========
 st.markdown("---")
 st.image("Logo.png", width=120)
