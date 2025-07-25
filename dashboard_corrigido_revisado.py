@@ -2,22 +2,29 @@ import streamlit as st
 # Senha correta
 SENHA_CORRETA = "acesso123"
 
-# Inicializa o estado da autenticação
+# Inicializa estado de autenticação
 if "autenticado" not in st.session_state:
     st.session_state["autenticado"] = False
 
-# Tela de senha
+# Função para validar senha e marcar autenticação
+def validar_senha():
+    if st.session_state["senha_digitada"] == SENHA_CORRETA:
+        st.session_state["autenticado"] = True
+    else:
+        st.session_state["erro_autenticacao"] = True
+
+# Se não autenticado, mostra tela de senha
 if not st.session_state["autenticado"]:
     st.title("🔐 Acesso Restrito")
-    senha_digitada = st.text_input("Digite a senha:", type="password")
 
-    if st.button("Entrar"):
-        if senha_digitada == SENHA_CORRETA:
-            st.session_state["autenticado"] = True
-        else:
-            st.error("Senha incorreta.")
+    # Campo de senha com chave ligada ao estado
+    st.text_input("Digite a senha:", type="password", key="senha_digitada", on_change=validar_senha)
 
-    # Interrompe até autenticar
+    # Mostra erro se necessário
+    if st.session_state.get("erro_autenticacao", False):
+        st.error("Senha incorreta.")
+        st.session_state["erro_autenticacao"] = False  # reseta para sumir no próximo loop
+
     st.stop()
     
 import pandas as pd
